@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.get("/")
 def hello():
-    return "Hello, world!\n"
+    return "Hello from CI/CD!\n"
 
 
 if __name__ == "__main__":
