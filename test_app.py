@@ -7,4 +7,4 @@ def test_hello_world():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert response.text == "Hello from CI/CD!\n"
+    assert response.text == "Hello from CI/CD 2.0!\n"
