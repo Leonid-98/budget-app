@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: ghcr.io/leonid-98/budget-app:latest
     container_name: hello-flask
     ports:
       - "127.0.0.1:8000:8000"
