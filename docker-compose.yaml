@@ -1,7 +1,10 @@
 services:
   app:
-    image: ghcr.io/leonid-98/budget-app:latest
-    container_name: hello-flask
-    ports:
-      - "127.0.0.1:8000:8000"
+    image: ghcr.io/leonid-98/budget-app:${IMAGE_TAG:?IMAGE_TAG is required}
     restart: unless-stopped
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
