@@ -78,12 +78,13 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
         run: |
-          printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" |
+          printf 'BUDGET_TAG=%s\n' "$IMAGE_TAG" |
           ssh \
             -i ~/.ssh/deploy_key \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}" \
-            'cat > /srv/budget-app/release.env &&
-             sudo -n /usr/bin/docker compose --env-file /srv/budget-app/release.env -f /srv/budget-app/compose.yaml pull &&
-             sudo -n /usr/bin/docker compose --env-file /srv/budget-app/release.env -f /srv/budget-app/compose.yaml up -d --remove-orphans'
+            'cat > /srv/homelab/.env &&
+             cd /srv/homelab &&
+             sudo -n /usr/bin/docker compose -f /srv/homelab/compose.yaml pull budget &&
+             sudo -n /usr/bin/docker compose -f /srv/homelab/compose.yaml up -d budget'
