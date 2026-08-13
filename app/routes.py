@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import date
 
 from flask import Blueprint, abort, current_app, g, redirect, render_template, request, url_for
@@ -71,6 +72,10 @@ def month_view(year, month):
     else:
         transfer_ctx = None
 
+    leftover = sides[0]["free"] - transfer  # each person's free money after the transfer
+    days = monthrange(year, month)[1]
+    free_after = {"total": leftover, "per_day": round(leftover / days)}
+
     prev_y, prev_m = services.prev_ym(year, month)
     next_y, next_m = services.next_ym(year, month)
     prev_month_row = Month.query.filter_by(year=prev_y, month=prev_m).first()
@@ -88,6 +93,7 @@ def month_view(year, month):
         next={"url": _month_url(next_y, next_m), "name": services.MONTHS_NOM[next_m - 1]},
         sides=sides,
         transfer=transfer_ctx,
+        free_after=free_after,
         can_copy=(not entries and prev_has_entries),
         groups=groups,
         tags=tags,

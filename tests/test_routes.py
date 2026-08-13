@@ -169,6 +169,10 @@ def test_settlement_line_rendered(as_lenya, app):
     assert "Лёня отправит Ане" in html
     assert "885,00" in html
     assert "−576,50" in html  # Аня's negative leftover in the summary table
+    # after the transfer both have 308,50; August has 31 days -> 9,95 per day
+    assert "Свободно" in html
+    assert "308,50" in html
+    assert "(9,95 в день)" in html
 
 
 def test_identity_device_fallback(client, app):

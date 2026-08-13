@@ -121,10 +121,14 @@
         </tbody>
       </table>
     </div>
-    {% if transfer %}
-    <div class="transfer-line">{{ transfer.sender.display_name }} отправит {{ transfer.receiver.name_dative }}
-      <span class="send">{{ transfer.amount|money }}</span></div>
-    {% endif %}
+    <div class="summary-foot">
+      {% if transfer %}
+      <div>{{ transfer.sender.display_name }} отправит {{ transfer.receiver.name_dative }}
+        <span class="send">{{ transfer.amount|money }}</span></div>
+      {% endif %}
+      <div>Свободно: <span class="val">{{ free_after.total|money }}</span>
+        <span class="perday">({{ free_after.per_day|money }} в день)</span></div>
+    </div>
   </section>
 </div>
 

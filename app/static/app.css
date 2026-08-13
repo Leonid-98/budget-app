@@ -329,18 +329,19 @@ a, button, input, select { font: inherit; }
 .sum-table tbody tr + tr th, .sum-table tbody tr + tr td { border-top: 1px solid var(--line); }
 .sum-table tr.free th { color: var(--ink); font-weight: 700; }
 .sum-table tr.free td { font-weight: 700; }
-.transfer-line {
+.summary-foot {
   display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   background: var(--accent-soft);
   padding: 12px 22px;
   font-size: 0.88rem;
   color: var(--ink);
 }
-.transfer-line .send { color: var(--accent); font-variant-numeric: tabular-nums; }
+.summary-foot .send { color: var(--accent); font-variant-numeric: tabular-nums; }
+.summary-foot .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.summary-foot .perday { color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* ---------- dialogs ---------- */
 dialog.modal {
