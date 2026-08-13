@@ -45,6 +45,7 @@ def create_app(config=None):
 
     with app.app_context():
         db.create_all()
+        _migrate()
         _seed(app)
 
     app.register_blueprint(bp)
@@ -90,6 +91,21 @@ def create_app(config=None):
         return response
 
     return app
+
+
+def _migrate():
+    """create_all() never alters existing tables — add columns introduced
+    after the first release to already-created databases."""
+    from sqlalchemy import text
+
+    existing = {row[1] for row in db.session.execute(text("PRAGMA table_info(users)"))}
+    for column, ddl in [
+        ("last_year", "ALTER TABLE users ADD COLUMN last_year INTEGER"),
+        ("last_month", "ALTER TABLE users ADD COLUMN last_month INTEGER"),
+    ]:
+        if column not in existing:
+            db.session.execute(text(ddl))
+    db.session.commit()
 
 
 def _seed(app):

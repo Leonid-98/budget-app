@@ -19,6 +19,8 @@ def _back(month_row, **params):
 
 @bp.get("/")
 def index():
+    if g.user and g.user.last_year and g.user.last_month:
+        return redirect(_month_url(g.user.last_year, g.user.last_month))
     today = date.today()
     return redirect(_month_url(today.year, today.month))
 
@@ -28,6 +30,10 @@ def month_view(year, month):
     if not 1 <= month <= 12 or not 2000 <= year <= 2100:
         abort(404)
     m = services.ensure_month(year, month)
+
+    if g.user and (g.user.last_year, g.user.last_month) != (year, month):
+        g.user.last_year, g.user.last_month = year, month
+        db.session.commit()
 
     users = User.query.order_by(User.side).all()  # left, right
     left = next(u for u in users if u.side == "left")

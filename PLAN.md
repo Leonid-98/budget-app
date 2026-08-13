@@ -35,7 +35,9 @@ personal server behind oauth2-proxy.
    latest value), groups (create/rename/reorder/archive), tags (coop, swed,
    misc, …). All changes go through the same audit log.
 5. **Month management** — create next month as a copy of a previous one
-   (entries and income copied, statuses reset to pending) or blank; navigate months.
+   (entries and income copied, statuses reset to pending) or blank; navigate
+   months. Opening the app lands on the month you last viewed (stored per
+   user; guests get the current calendar month).
 6. **Change history** — append-only audit log for every create/update/delete:
    who (email from oauth2-proxy header, else device-ID cookie), when,
    field, old value → new value. Shown in a **global** "History" pop-up

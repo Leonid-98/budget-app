@@ -13,6 +13,8 @@ class User(db.Model):
     side = db.Column(db.String, unique=True, nullable=False)  # left | right
     accent_color = db.Column(db.String, nullable=False, default="teal")
     theme = db.Column(db.String, nullable=False, default="system")
+    last_year = db.Column(db.Integer, nullable=True)
+    last_month = db.Column(db.Integer, nullable=True)
 
 
 class Month(db.Model):

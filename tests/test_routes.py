@@ -24,6 +24,45 @@ def test_index_redirects_to_current_month(client):
     assert "/m/" in response.headers["Location"]
 
 
+def test_index_opens_last_viewed_month(as_lenya, client, app):
+    as_lenya.get("/m/2026/9")
+    location = as_lenya.get("/").headers["Location"]
+    assert location.endswith("/m/2026/9")
+
+    as_lenya.get("/m/2026/8")
+    location = as_lenya.get("/").headers["Location"]
+    assert location.endswith("/m/2026/8")
+
+    with app.app_context():
+        anya = User.query.filter_by(side="right").first()
+        assert anya.last_year is None  # per-user, other user unaffected
+
+    from datetime import date
+    today = date.today()
+    location = client.get("/").headers["Location"]  # guest: current month
+    assert location.endswith(f"/m/{today.year}/{today.month}")
+
+
+def test_migration_adds_last_month_columns(app, tmp_path):
+    from sqlalchemy import text
+    from app import create_app
+
+    with app.app_context():
+        # simulate a pre-feature database
+        db.session.execute(text("ALTER TABLE users DROP COLUMN last_year"))
+        db.session.execute(text("ALTER TABLE users DROP COLUMN last_month"))
+        db.session.commit()
+
+    reopened = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": app.config["SQLALCHEMY_DATABASE_URI"],
+        "USERS": app.config["USERS"],
+    })
+    with reopened.app_context():
+        columns = {row[1] for row in db.session.execute(text("PRAGMA table_info(users)"))}
+    assert {"last_year", "last_month"} <= columns
+
+
 def test_month_page_renders(as_lenya, app):
     response = as_lenya.get("/m/2026/8")
     html = response.get_data(as_text=True)
