@@ -1,7 +1,19 @@
 services:
   app:
     image: ghcr.io/leonid-98/budget-app:latest
-    container_name: hello-flask
+    container_name: budget-app
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      DATABASE_PATH: /data/budget.db
+      IDENTITY_HEADER: X-Forwarded-Email
+      SPLIT_RATIO: "0.5"
+      BUDGET_USER1_EMAIL: leonid.tsigrinski@gmail.com
+      BUDGET_USER1_NAME: Лёня
+      BUDGET_USER1_NAME_DAT: Лёне
+      BUDGET_USER2_EMAIL: kotsetova.anna@gmail.com
+      BUDGET_USER2_NAME: Аня
+      BUDGET_USER2_NAME_DAT: Ане
     restart: unless-stopped

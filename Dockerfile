@@ -5,6 +5,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py .
+COPY wsgi.py .
+COPY app ./app
 
-CMD ["python", "app.py"]
+ENV DATABASE_PATH=/data/budget.db
+RUN mkdir -p /data
+
+CMD ["gunicorn", "-w", "1", "--threads", "4", "-b", "0.0.0.0:8000", "wsgi:app"]
