@@ -32,6 +32,7 @@ def create_app(config=None):
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_path
     app.config["SPLIT_RATIO"] = os.environ.get("SPLIT_RATIO", "0.5")
     app.config["IDENTITY_HEADER"] = os.environ.get("IDENTITY_HEADER", "X-Forwarded-Email")
+    app.config["MOCK_AUTH_EMAIL"] = os.environ.get("MOCK_AUTH_EMAIL", "")
     app.config["USERS"] = users_from_env()
     if config:
         app.config.update(config)
@@ -56,7 +57,7 @@ def create_app(config=None):
         from .models import User
 
         header = app.config["IDENTITY_HEADER"]
-        email = (request.headers.get(header) or "").strip().lower()
+        email = (request.headers.get(header) or app.config["MOCK_AUTH_EMAIL"] or "").strip().lower()
         g.user = None
         g.set_device_cookie = None
         if email:

@@ -148,6 +148,17 @@ def test_unknown_email_shown_as_guest(client, app):
     assert "stranger@example.com" not in html
 
 
+def test_mock_auth_identifies_user_without_header(app):
+    app.config["MOCK_AUTH_EMAIL"] = "lenya@example.com"
+    client = app.test_client()
+    html = client.get("/m/2026/8").get_data(as_text=True)
+    assert ">\n      Лёня\n    </button>" in html or "Лёня" in html
+    assert "Гость" not in html
+    # a real proxy header still wins over the mock
+    html = client.get("/m/2026/8", headers={"X-Forwarded-Email": "anya@example.com"}).get_data(as_text=True)
+    assert "Гость" not in html
+
+
 def test_prefs_saved_per_user(as_lenya, app):
     as_lenya.post("/prefs", data={"accent": "coral", "theme": "dark"})
     with app.app_context():

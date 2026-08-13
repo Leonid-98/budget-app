@@ -17,3 +17,25 @@ services:
       BUDGET_USER2_NAME: Аня
       BUDGET_USER2_NAME_DAT: Ане
     restart: unless-stopped
+
+  # Local testing only: docker compose --profile local up --build app-local
+  # No reverse proxy locally, so MOCK_AUTH_EMAIL stands in for oauth2-proxy —
+  # switch it to the other email to test as Аня. Never set it in production.
+  app-local:
+    profiles: ["local"]
+    build: .
+    container_name: budget-app-local
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data-local:/data
+    environment:
+      DATABASE_PATH: /data/budget.db
+      SPLIT_RATIO: "0.5"
+      MOCK_AUTH_EMAIL: leonid.tsigrinski@gmail.com
+      BUDGET_USER1_EMAIL: leonid.tsigrinski@gmail.com
+      BUDGET_USER1_NAME: Лёня
+      BUDGET_USER1_NAME_DAT: Лёне
+      BUDGET_USER2_EMAIL: kotsetova.anna@gmail.com
+      BUDGET_USER2_NAME: Аня
+      BUDGET_USER2_NAME_DAT: Ане
