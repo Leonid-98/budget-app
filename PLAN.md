@@ -126,9 +126,13 @@ editing income in Settings updates the currently open (and future) months only.
 
 ## Architecture (as built)
 
-- **Flask + Jinja2, plain forms + redirects** — no htmx and no JS framework:
-  every action is a normal form POST followed by a redirect back to the month
-  (dialogs reopen via a `?dlg=` query param). ~60 lines of vanilla JS handle
+- **Flask + Jinja2, plain forms + redirects, htmx on top** — every action is
+  a normal form POST followed by a redirect back to the month (dialogs reopen
+  via a `?dlg=` query param). A vendored htmx (`hx-boost` on one `#page`
+  wrapper, `hx-select`/`hx-target` back onto itself) turns those same
+  navigations into in-place partial swaps — no visible reloads, scroll
+  preserved — with zero server-side changes; plain forms remain the no-JS
+  fallback. ~60 lines of vanilla JS (event-delegated, swap-safe) handle
   dialogs, inline form toggles, and instant accent/theme switching.
 - **Flask-SQLAlchemy** with `create_all()` on startup; **SQLite** on a Docker
   volume (`/data/budget.db`), backup = copy the file. Alembic deferred until

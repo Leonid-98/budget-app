@@ -70,6 +70,8 @@ def test_month_page_renders(as_lenya, app):
     assert "Август 2026" in html
     assert "Лёня" in html and "Аня" in html
     assert "lenya@example.com" not in html  # emails never rendered
+    assert 'id="page"' in html and 'hx-boost="true"' in html  # htmx swap root
+    assert "htmx.min.js" in html
 
 
 def test_entry_create_edit_toggle_delete(as_lenya, app):
