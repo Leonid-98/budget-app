@@ -222,28 +222,22 @@ a, button, input, select { font: inherit; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; }
 .person-head { background: var(--accent-soft); }
 .person-head > div { padding: 12px 22px; font-weight: 700; }
-.side { padding: 8px 22px 18px; min-width: 0; }
+.side { padding: 0 22px 6px; min-width: 0; }
 .side + .side { border-left: 1px solid var(--line); }
-.side-label {
-  display: none;
-  margin: 10px 0 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--accent);
-}
 
+.income-band { border-bottom: 1px solid var(--line); }
+.income-band .side { padding: 12px 22px; }
 .income-line {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 10px 0 12px;
-  border-bottom: 1px solid var(--line);
 }
 .income-line .lbl { font-weight: 600; }
 
+.band:last-child { padding-bottom: 12px; }
 .grp {
   display: inline-block;
-  margin: 16px 0 4px;
+  margin: 16px 22px 4px;
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -277,9 +271,9 @@ a, button, input, select { font: inherit; }
   font-weight: 600;
   border-radius: 999px;
   border: none;
-  padding: 2px 0;
-  min-width: 88px;
-  text-align: center;
+  padding: 2px 12px;
+  width: 96px;
+  text-align: left;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -304,7 +298,7 @@ a, button, input, select { font: inherit; }
   box-shadow: var(--shadow);
   padding: 6px;
 }
-.status-menu .status { min-width: 104px; text-align: left; padding: 3px 12px; }
+.status-menu .status { width: auto; min-width: 104px; text-align: left; padding: 3px 12px; }
 
 /* ---------- forms ---------- */
 .in {
@@ -505,8 +499,17 @@ dialog.modal::backdrop { background: var(--backdrop); }
 
 @media (max-width: 720px) {
   .cols { grid-template-columns: 1fr; }
-  .side + .side { border-left: none; border-top: 1px dashed var(--line); }
-  .side-label { display: block; }
+  .side + .side { border-left: none; }
+  .side:not(.empty) + .side:not(.empty) { border-top: 1px dashed var(--line); }
+  .side.empty { display: none; }
+  .side[data-person]::before {
+    content: attr(data-person);
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 6px 0 2px;
+  }
   .person-head { display: none; }
   .monthnav { margin: 0; }
   .admin-grid { grid-template-columns: 1fr; }

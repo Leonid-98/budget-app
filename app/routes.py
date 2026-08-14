@@ -48,16 +48,22 @@ def month_view(year, month):
     sides = []
     for user in (left, right):
         user_entries = [e for e in entries if e.user_id == user.id]
-        grouped = [(grp, [e for e in user_entries if e.group_id == grp.id]) for grp in groups]
-        grouped = [(grp, items) for grp, items in grouped if items]
         expenses = sum(e.amount_cents for e in user_entries)
         sides.append({
             "user": user,
             "income": incomes.get(user.id, 0),
-            "grouped": grouped,
             "expenses": expenses,
             "free": incomes.get(user.id, 0) - expenses,
         })
+
+    # groups as horizontal bands: both persons' entries of a group sit side by
+    # side, so expense types stay vertically aligned across the two columns
+    bands = []
+    for grp in groups:
+        left_items = [e for e in entries if e.user_id == left.id and e.group_id == grp.id]
+        right_items = [e for e in entries if e.user_id == right.id and e.group_id == grp.id]
+        if left_items or right_items:
+            bands.append((grp, left_items, right_items))
 
     _, _, transfer = services.settlement(
         sides[0]["income"], sides[0]["expenses"],
@@ -91,6 +97,7 @@ def month_view(year, month):
         prev={"url": _month_url(prev_y, prev_m), "name": services.MONTHS_NOM[prev_m - 1]},
         next={"url": _month_url(next_y, next_m), "name": services.MONTHS_NOM[next_m - 1]},
         sides=sides,
+        bands=bands,
         transfer=transfer_ctx,
         free_after=free_after,
         can_copy=(not entries and prev_has_entries),

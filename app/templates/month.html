@@ -38,62 +38,71 @@
     {% endif %}
   </div>
 
+{% macro entry_row(e, m, groups, edit_id) %}
+{% if edit_id == e.id %}
+<form class="edit-row" method="post" action="{{ url_for('main.entry_update', entry_id=e.id) }}">
+  <input class="in name" name="name" value="{{ e.name }}" required>
+  <select class="in" name="group_id">
+    {% for grp in groups %}
+    <option value="{{ grp.id }}" {% if grp.id == e.group_id %}selected{% endif %}>{{ grp.name }}</option>
+    {% endfor %}
+  </select>
+  <input class="in amount-in" name="amount" value="{{ e.amount_cents|money }}"
+         required pattern="[0-9\s ]+([.,][0-9]{1,2})?">
+  <span class="edit-actions">
+    <button class="btn primary small">Сохранить</button>
+    <button class="btn small danger" formaction="{{ url_for('main.entry_delete', entry_id=e.id) }}"
+            formnovalidate>Удалить</button>
+    <a class="btn small" href="{{ url_for('main.month_view', year=m.year, month=m.month) }}">Отмена</a>
+  </span>
+</form>
+{% else %}
+<div class="entry-main">
+  <a class="entry-label" href="{{ url_for('main.month_view', year=m.year, month=m.month, edit=e.id) }}">{{ e.name }}</a>
+  <span class="leader"></span>
+  <span class="amount">{{ e.amount_cents|money }}</span>
+  <div class="status-dd">
+    <button type="button" class="status {{ STATUS_CLASS[e.status] }}" data-dd>{{ STATUS_LABEL[e.status] }}</button>
+    <form class="status-menu hidden" method="post" action="{{ url_for('main.entry_status', entry_id=e.id) }}">
+      {% for key, label, cls in STATUSES %}
+      <button class="status {{ cls }}" name="status" value="{{ key }}">{{ label }}</button>
+      {% endfor %}
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
   <section class="ledger" aria-label="{{ label }}">
     <div class="person-head cols">
       {% for side in sides %}<div>{{ side.user.display_name }}</div>{% endfor %}
     </div>
 
-    <div class="cols">
+    <div class="cols income-band">
       {% for side in sides %}
-      <div class="side">
-        <p class="side-label">{{ side.user.display_name }}</p>
-
+      <div class="side" data-person="{{ side.user.display_name }}">
         <div class="income-line">
           <span class="lbl">Доход</span>
           <span class="leader"></span>
           <span class="amount">{{ side.income|money }}</span>
         </div>
-
-        {% for group, items in side.grouped %}
-        <p class="grp">{{ group.name }}</p>
-          {% for e in items %}
-            {% if edit_id == e.id %}
-            <form class="edit-row" method="post" action="{{ url_for('main.entry_update', entry_id=e.id) }}">
-              <input class="in name" name="name" value="{{ e.name }}" required>
-              <select class="in" name="group_id">
-                {% for grp in groups %}
-                <option value="{{ grp.id }}" {% if grp.id == e.group_id %}selected{% endif %}>{{ grp.name }}</option>
-                {% endfor %}
-              </select>
-              <input class="in amount-in" name="amount" value="{{ e.amount_cents|money }}"
-                     required pattern="[0-9\s ]+([.,][0-9]{1,2})?">
-              <span class="edit-actions">
-                <button class="btn primary small">Сохранить</button>
-                <button class="btn small danger" formaction="{{ url_for('main.entry_delete', entry_id=e.id) }}"
-                        formnovalidate>Удалить</button>
-                <a class="btn small" href="{{ url_for('main.month_view', year=m.year, month=m.month) }}">Отмена</a>
-              </span>
-            </form>
-            {% else %}
-            <div class="entry-main">
-              <a class="entry-label" href="{{ url_for('main.month_view', year=m.year, month=m.month, edit=e.id) }}">{{ e.name }}</a>
-              <span class="leader"></span>
-              <span class="amount">{{ e.amount_cents|money }}</span>
-              <div class="status-dd">
-                <button type="button" class="status {{ STATUS_CLASS[e.status] }}" data-dd>{{ STATUS_LABEL[e.status] }}</button>
-                <form class="status-menu hidden" method="post" action="{{ url_for('main.entry_status', entry_id=e.id) }}">
-                  {% for key, label, cls in STATUSES %}
-                  <button class="status {{ cls }}" name="status" value="{{ key }}">{{ label }}</button>
-                  {% endfor %}
-                </form>
-              </div>
-            </div>
-            {% endif %}
-          {% endfor %}
-        {% endfor %}
       </div>
       {% endfor %}
     </div>
+
+    {% for grp, left_items, right_items in bands %}
+    <div class="band">
+      <p class="grp">{{ grp.name }}</p>
+      <div class="cols">
+        <div class="side{{ ' empty' if not left_items }}" data-person="{{ users[0].display_name }}">
+          {% for e in left_items %}{{ entry_row(e, m, groups, edit_id) }}{% endfor %}
+        </div>
+        <div class="side{{ ' empty' if not right_items }}" data-person="{{ users[1].display_name }}">
+          {% for e in right_items %}{{ entry_row(e, m, groups, edit_id) }}{% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </section>
 
   <section class="summary" aria-label="Итог месяца">
