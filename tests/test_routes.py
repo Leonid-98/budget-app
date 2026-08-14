@@ -86,11 +86,11 @@ def test_entry_create_edit_toggle_delete(as_lenya, app):
         entry = Entry.query.filter_by(name="Квартира").first()
         entry_id, group_id = entry.id, entry.group_id
 
-    as_lenya.post(f"/entries/{entry_id}/toggle")
+    as_lenya.post(f"/entries/{entry_id}/status", data={"status": "paid"})
     assert "оплачено" in as_lenya.get("/m/2026/8").get_data(as_text=True)
 
     as_lenya.post(f"/entries/{entry_id}/update", data={
-        "name": "Квартира", "amount": "520,00", "group_id": group_id, "tag_id": "",
+        "name": "Квартира", "amount": "520,00", "group_id": group_id,
     })
     assert "520,00" in as_lenya.get("/m/2026/8").get_data(as_text=True)
 
@@ -103,7 +103,7 @@ def test_entry_create_edit_toggle_delete(as_lenya, app):
     with app.app_context():
         messages = [a.message for a in AuditLog.query.all()]
     assert any("добавлено «Квартира»" in m for m in messages)
-    assert any("отмечено как оплачено" in m for m in messages)
+    assert any("ожидает → оплачено" in m for m in messages)
     assert any("520,00" in m for m in messages)
     assert any("удалено «Квартира»" in m for m in messages)
 
@@ -115,7 +115,7 @@ def test_copy_month_resets_statuses(as_lenya, app):
     with app.app_context():
         entry = Entry.query.filter_by(name="Интернет").first()
         entry_id = entry.id
-    as_lenya.post(f"/entries/{entry_id}/toggle")  # mark paid in July
+    as_lenya.post(f"/entries/{entry_id}/status", data={"status": "paid"})  # paid in July
 
     as_lenya.get("/m/2026/8")
     as_lenya.post("/m/2026/8/copy-prev")
@@ -128,6 +128,78 @@ def test_copy_month_resets_statuses(as_lenya, app):
         assert copied[0].status == "pending"
         messages = [a.message for a in AuditLog.query.all()]
     assert any("создан Август 2026 из июля" in m for m in messages)
+
+
+def test_bank_states(as_lenya, app):
+    as_lenya.get("/m/2026/8")
+    month_id = _month_id(app, 2026, 8)
+    _add_entry(as_lenya, app, month_id, name="Автофонд", amount="550,00")
+    with app.app_context():
+        entry_id = Entry.query.filter_by(name="Автофонд").first().id
+
+    as_lenya.post(f"/entries/{entry_id}/status", data={"status": "seb"})
+    html = as_lenya.get("/m/2026/8").get_data(as_text=True)
+    assert "seb pank" in html and "st-seb" in html
+    assert "swedbank" in html and "coop pank" in html and "bigbank" in html  # dropdown options
+
+    as_lenya.post(f"/entries/{entry_id}/status", data={"status": "revolut"})  # unknown: ignored
+    with app.app_context():
+        assert db.session.get(Entry, entry_id).status == "seb"
+        messages = [a.message for a in AuditLog.query.all()]
+    assert any("«Автофонд»: ожидает → seb pank" in m for m in messages)
+
+
+def test_migration_converts_bank_tags_to_states(app):
+    from sqlalchemy import text
+    from app import create_app
+    from app.services import ensure_month
+
+    with app.app_context():
+        # recreate the pre-redesign schema exactly: tags table + entries with
+        # tag_id declared in an inline FOREIGN KEY (blocks plain DROP COLUMN)
+        m = ensure_month(2026, 8)
+        user = User.query.filter_by(side="left").first()
+        group = Group.query.order_by(Group.sort_order).first()
+        month_id, user_id, group_id = m.id, user.id, group.id
+        db.session.execute(text("DROP TABLE entries"))
+        db.session.execute(text("""
+            CREATE TABLE tags (id INTEGER PRIMARY KEY, name VARCHAR NOT NULL,
+                               sort_order INTEGER NOT NULL)"""))
+        db.session.execute(text("""
+            CREATE TABLE entries (
+                id INTEGER PRIMARY KEY, month_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL, group_id INTEGER NOT NULL,
+                name VARCHAR NOT NULL, amount_cents INTEGER NOT NULL,
+                status VARCHAR NOT NULL, tag_id INTEGER,
+                sort_order INTEGER NOT NULL,
+                created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL,
+                FOREIGN KEY(month_id) REFERENCES months (id),
+                FOREIGN KEY(tag_id) REFERENCES tags (id))"""))
+        db.session.execute(text("INSERT INTO tags VALUES (1,'SEB 2',0),(2,'SWED',1),(3,'MISC',2)"))
+        for name, tag_id in [("Автофонд", 1), ("Квартира", 2), ("Прочее", 3)]:
+            db.session.execute(text(
+                "INSERT INTO entries (month_id, user_id, group_id, name, amount_cents,"
+                " status, tag_id, sort_order, created_at, updated_at)"
+                " VALUES (:m, :u, :g, :n, 1000, 'pending', :t, 0,"
+                " datetime('now'), datetime('now'))"),
+                {"m": month_id, "u": user_id, "g": group_id, "n": name, "t": tag_id})
+        db.session.commit()
+
+    reopened = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": app.config["SQLALCHEMY_DATABASE_URI"],
+        "USERS": app.config["USERS"],
+    })
+    with reopened.app_context():
+        statuses = dict(db.session.execute(text("SELECT name, status FROM entries")).all())
+        assert statuses["Автофонд"] == "seb"
+        assert statuses["Квартира"] == "swed"
+        assert statuses["Прочее"] == "pending"  # non-bank tag: status untouched
+        columns = {row[1] for row in db.session.execute(text("PRAGMA table_info(entries)"))}
+        assert "tag_id" not in columns
+        tables = {row[0] for row in db.session.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'"))}
+        assert "tags" not in tables
 
 
 def test_income_updates_current_and_future_months_only(as_lenya, app):

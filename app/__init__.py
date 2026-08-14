@@ -52,6 +52,9 @@ def create_app(config=None):
 
     app.jinja_env.filters["money"] = services.fmt_money
     app.jinja_env.filters["when"] = services.fmt_when
+    app.jinja_env.globals["STATUSES"] = services.STATUSES
+    app.jinja_env.globals["STATUS_LABEL"] = services.STATUS_LABEL
+    app.jinja_env.globals["STATUS_CLASS"] = services.STATUS_CLASS
 
     @app.before_request
     def identify():
@@ -94,22 +97,51 @@ def create_app(config=None):
 
 
 def _migrate():
-    """create_all() never alters existing tables — add columns introduced
-    after the first release to already-created databases."""
+    """create_all() never alters existing tables — evolve databases created
+    by earlier releases."""
     from sqlalchemy import text
 
-    existing = {row[1] for row in db.session.execute(text("PRAGMA table_info(users)"))}
+    users_cols = {row[1] for row in db.session.execute(text("PRAGMA table_info(users)"))}
     for column, ddl in [
         ("last_year", "ALTER TABLE users ADD COLUMN last_year INTEGER"),
         ("last_month", "ALTER TABLE users ADD COLUMN last_month INTEGER"),
     ]:
-        if column not in existing:
+        if column not in users_cols:
             db.session.execute(text(ddl))
+
+    # Tags were replaced by bank states: entries whose tag named a bank take
+    # that bank as their status, then the tag machinery is dropped.
+    entry_cols = {row[1] for row in db.session.execute(text("PRAGMA table_info(entries)"))}
+    if "tag_id" in entry_cols:
+        tagged = db.session.execute(text(
+            "SELECT e.id, upper(t.name) FROM entries e JOIN tags t ON t.id = e.tag_id"
+        )).all()
+        bank_by_tag = {"SWED": "swed", "COOP": "coop", "BIGBANK": "big"}
+        for entry_id, tag_name in tagged:
+            state = bank_by_tag.get(tag_name, "seb" if tag_name.startswith("SEB") else None)
+            if state:
+                db.session.execute(
+                    text("UPDATE entries SET status = :state WHERE id = :id"),
+                    {"state": state, "id": entry_id},
+                )
+        # tag_id sits inside a FOREIGN KEY clause of the original table, so
+        # SQLite refuses DROP COLUMN — rebuild the table from the current model.
+        db.session.execute(text("ALTER TABLE entries RENAME TO entries_old"))
+        db.session.commit()
+        db.create_all()  # recreates `entries` from the model, without tag_id
+        db.session.execute(text(
+            "INSERT INTO entries (id, month_id, user_id, group_id, name, amount_cents,"
+            " status, sort_order, created_at, updated_at)"
+            " SELECT id, month_id, user_id, group_id, name, amount_cents,"
+            " status, sort_order, created_at, updated_at FROM entries_old"))
+        db.session.execute(text("DROP TABLE entries_old"))
+        db.session.execute(text("DROP TABLE IF EXISTS tags"))
+
     db.session.commit()
 
 
 def _seed(app):
-    from .models import Group, Tag, User
+    from .models import Group, User
 
     for cfg in app.config["USERS"]:
         user = User.query.filter_by(side=cfg["side"]).first()
@@ -126,9 +158,5 @@ def _seed(app):
     if Group.query.count() == 0:
         for i, name in enumerate(["Счета", "Рассрочки", "Траты", "Долги", "Отложить"]):
             db.session.add(Group(name=name, sort_order=i))
-
-    if Tag.query.count() == 0:
-        for i, name in enumerate(["SWED", "COOP", "SEB 2", "BIGBANK"]):
-            db.session.add(Tag(name=name, sort_order=i))
 
     db.session.commit()

@@ -21,7 +21,26 @@ function setPref(field, value, btn) {
   fetch("/prefs", { method: "POST", body });
 }
 
+function closeStatusMenus() {
+  document.querySelectorAll(".status-menu:not(.hidden)").forEach((m) => m.classList.add("hidden"));
+}
+
 document.addEventListener("click", (e) => {
+  const dd = e.target.closest("[data-dd]");
+  if (dd) {
+    const menu = dd.nextElementSibling;
+    const wasHidden = menu.classList.contains("hidden");
+    closeStatusMenus();
+    if (wasHidden) {
+      menu.classList.remove("hidden");
+      const rect = dd.getBoundingClientRect();
+      menu.style.top = Math.min(rect.bottom + 4, innerHeight - menu.offsetHeight - 8) + "px";
+      menu.style.left = Math.min(rect.left, innerWidth - menu.offsetWidth - 8) + "px";
+    }
+    return;
+  }
+  if (!e.target.closest(".status-menu")) closeStatusMenus();
+
   const opener = e.target.closest("[data-open]");
   if (opener) return openDialog(opener.dataset.open);
 
@@ -54,3 +73,4 @@ function openFromState() {
 }
 document.addEventListener("DOMContentLoaded", openFromState);
 document.body.addEventListener("htmx:afterSwap", openFromState);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeStatusMenus(); });

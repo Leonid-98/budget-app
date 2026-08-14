@@ -12,8 +12,8 @@ personal server behind oauth2-proxy.
 | Left half = Leonid, right half = wife  | Two person columns on the month view             |
 | Доход row                              | Per-person income value, edited in Settings      |
 | Blocks per expense type                | Ordered groups (Счета, Рассрочки, Траты, …)      |
-| Cell color = paid / not paid           | Status chip on each expense (paid / pending)     |
-| "this is in Swedbank" cell comments    | Optional tag on an entry (swedbank, coop pank)   |
+| Cell color = paid / not paid           | State chip on each expense (see six states)      |
+| "this is in Swedbank" cell comments    | Bank states: swedbank / coop pank / seb / bigbank |
 | Formulas (free money, transfer amount) | Computed settlement: who sends whom, how much    |
 
 ## v1 functionality
@@ -22,7 +22,10 @@ personal server behind oauth2-proxy.
    the top (a value, not an entry list — it changes rarely and is edited in
    Settings). Expenses are grouped under the pre-defined **ordered groups**
    (Счета, Рассрочки, Траты, Долги, Отложить). Each expense is: name, amount,
-   status (paid / pending), optional tag showing where the money sits.
+   and one of six **states** picked from a small dropdown on the chip:
+   оплачено (green), ожидает (amber), swedbank (warm orange), coop pank
+   (light blue), seb pank (dark green), bigbank (light green) — a state is
+   either a payment status or the bank where the money sits.
 2. **Inline editing** — click an expense to edit it in place (htmx partial
    updates); the summary recalculates on every change.
 3. **Summary block** — below the ledger: a small table with a column per
@@ -32,8 +35,8 @@ personal server behind oauth2-proxy.
    50/50) lives in server config only.
 4. **Settings pop-up** — opened from a gear icon in the header; one place to
    manage the rarely-changed things: per-person income (new months take the
-   latest value), groups (create/rename/reorder/archive), tags (coop, swed,
-   misc, …). All changes go through the same audit log.
+   latest value) and groups (create/rename/reorder/archive). All changes go
+   through the same audit log.
 5. **Month management** — create next month as a copy of a previous one
    (entries and income copied, statuses reset to pending) or blank; navigate
    months. Opening the app lands on the month you last viewed (stored per
@@ -100,7 +103,9 @@ sheet's Остаток (308.5 / 308.5) and Пропорция (2108 kept / 885 s
 5. **Each entry belongs to exactly one person's column**, like the sheet.
 6. **Groups and tags are shared lists** used by both persons and all months,
    managed only in the Settings pop-up.
-7. **Status is binary** — paid/pending, expenses only. Income has no status.
+7. **Every expense has exactly one state** (payment status or bank location —
+   they are mutually exclusive by design). Income has no state. Copying a
+   month resets all states to ожидает.
 8. **Deployment stays as-is**: one Flask container behind the proxy; SQLite database
    file on a mounted Docker volume; backup = copy that one file.
 9. When no email header is present (e.g. direct LAN access), the actor is recorded
@@ -115,9 +120,9 @@ users         (id, email, display_name, side,
 months        (id, year, month, note)
 month_incomes (month_id, user_id, income_cents)          -- snapshot per month
 groups        (id, name, sort_order, archived)           -- Счета, Рассрочки, …
-tags          (id, name, sort_order)                     -- swed, coop, seb 2, misc, …
 entries       (id, month_id, user_id, group_id, name, amount_cents,
-               status, tag_id, sort_order, created_at, updated_at)  -- tag_id nullable
+               status, sort_order, created_at, updated_at)
+               -- status: paid | pending | swed | coop | seb | big
 audit_log     (id, at, actor, action, entry_id, month_id, field, old_value, new_value)
 ```
 

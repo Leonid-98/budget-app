@@ -4,7 +4,7 @@ from datetime import date
 from flask import Blueprint, abort, current_app, g, redirect, render_template, request, url_for
 
 from . import db
-from .models import Entry, Group, Month, MonthIncome, Tag, User
+from .models import Entry, Group, Month, MonthIncome, User
 from . import services
 
 bp = Blueprint("main", __name__)
@@ -40,7 +40,6 @@ def month_view(year, month):
     left = next(u for u in users if u.side == "left")
     right = next(u for u in users if u.side == "right")
     groups = Group.query.filter_by(archived=False).order_by(Group.sort_order, Group.id).all()
-    tags = Tag.query.order_by(Tag.sort_order, Tag.id).all()
 
     entries = (Entry.query.filter_by(month_id=m.id)
                .order_by(Entry.sort_order, Entry.id).all())
@@ -96,7 +95,6 @@ def month_view(year, month):
         free_after=free_after,
         can_copy=(not entries and prev_has_entries),
         groups=groups,
-        tags=tags,
         users=(left, right),
         audit=services.recent_audit(),
         actors={u.email: u.display_name for u in users},
@@ -120,10 +118,7 @@ def copy_prev(year, month):
 # ---------- entries ----------
 
 def _entry_summary(entry):
-    parts = [entry.group.name, services.fmt_money(entry.amount_cents)]
-    if entry.tag:
-        parts.append(entry.tag.name)
-    return ", ".join(parts)
+    return f"{entry.group.name}, {services.fmt_money(entry.amount_cents)}"
 
 
 @bp.post("/entries")
@@ -138,14 +133,13 @@ def entry_create():
     group = db.session.get(Group, request.form.get("group_id", type=int) or 0)
     if not name or user is None or group is None:
         return _back(m)
-    tag = db.session.get(Tag, request.form.get("tag_id", type=int) or 0)
 
     last = (Entry.query
             .filter_by(month_id=m.id, user_id=user.id, group_id=group.id)
             .order_by(Entry.sort_order.desc()).first())
     entry = Entry(
         month_id=m.id, user_id=user.id, group_id=group.id, name=name,
-        amount_cents=amount, tag_id=tag.id if tag else None,
+        amount_cents=amount,
         sort_order=(last.sort_order + 1) if last else 0,
     )
     db.session.add(entry)
@@ -168,8 +162,6 @@ def entry_update(entry_id):
     group = db.session.get(Group, request.form.get("group_id", type=int) or 0)
     if not name or group is None:
         return _back(m)
-    tag = db.session.get(Tag, request.form.get("tag_id", type=int) or 0)
-    tag_id = tag.id if tag else None
 
     changes = []
     if name != entry.name:
@@ -178,29 +170,28 @@ def entry_update(entry_id):
         changes.append(f"сумма {services.fmt_money(entry.amount_cents)} → {services.fmt_money(amount)}")
     if group.id != entry.group_id:
         changes.append(f"группа {entry.group.name} → {group.name}")
-    if tag_id != entry.tag_id:
-        old = entry.tag.name if entry.tag else "—"
-        new = tag.name if tag else "—"
-        changes.append(f"тег {old} → {new}")
 
     if changes:
         label = entry.name
-        entry.name, entry.amount_cents, entry.group_id, entry.tag_id = name, amount, group.id, tag_id
+        entry.name, entry.amount_cents, entry.group_id = name, amount, group.id
         services.log(g.actor, f"«{label}»: " + ", ".join(changes),
                      services.month_label(m.year, m.month))
         db.session.commit()
     return _back(m)
 
 
-@bp.post("/entries/<int:entry_id>/toggle")
-def entry_toggle(entry_id):
+@bp.post("/entries/<int:entry_id>/status")
+def entry_status(entry_id):
     entry = db.get_or_404(Entry, entry_id)
     m = entry.month
-    entry.status = "pending" if entry.status == "paid" else "paid"
-    state = "оплачено" if entry.status == "paid" else "ожидает"
-    services.log(g.actor, f"«{entry.name}» отмечено как {state}",
-                 services.month_label(m.year, m.month))
-    db.session.commit()
+    new = request.form.get("status")
+    if new in services.STATUS_LABEL and new != entry.status:
+        old_label = services.STATUS_LABEL[entry.status]
+        entry.status = new
+        services.log(g.actor,
+                     f"«{entry.name}»: {old_label} → {services.STATUS_LABEL[new]}",
+                     services.month_label(m.year, m.month))
+        db.session.commit()
     return _back(m)
 
 
@@ -281,18 +272,6 @@ def group_move(group_id):
             groups[idx].sort_order, groups[other].sort_order = (
                 groups[other].sort_order, groups[idx].sort_order)
             db.session.commit()
-    return _back(m, dlg="settings")
-
-
-@bp.post("/settings/tags/add")
-def tag_add():
-    m = db.get_or_404(Month, request.form.get("month_id", type=int) or 0)
-    name = (request.form.get("name") or "").strip()
-    if name and not Tag.query.filter_by(name=name).first():
-        last = Tag.query.order_by(Tag.sort_order.desc()).first()
-        db.session.add(Tag(name=name, sort_order=(last.sort_order + 1) if last else 0))
-        services.log(g.actor, f"добавлен тег «{name}» (Настройки)")
-        db.session.commit()
     return _back(m, dlg="settings")
 
 

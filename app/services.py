@@ -11,6 +11,19 @@ MONTHS_GEN = ["января", "февраля", "марта", "апреля", "�
 MONTHS_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн",
                 "июл", "авг", "сен", "окт", "ноя", "дек"]
 
+# Entry states: (key, label, css class). A state is either a payment status
+# or the bank where the money sits.
+STATUSES = [
+    ("paid", "оплачено", "good"),
+    ("pending", "ожидает", "warn"),
+    ("swed", "swedbank", "st-swed"),
+    ("coop", "coop pank", "st-coop"),
+    ("seb", "seb pank", "st-seb"),
+    ("big", "bigbank", "st-big"),
+]
+STATUS_LABEL = {key: label for key, label, _ in STATUSES}
+STATUS_CLASS = {key: cls for key, _, cls in STATUSES}
+
 
 # ---------- money ----------
 
@@ -122,7 +135,7 @@ def copy_month(target, source, actor):
         db.session.add(Entry(
             month_id=target.id, user_id=e.user_id, group_id=e.group_id,
             name=e.name, amount_cents=e.amount_cents, status="pending",
-            tag_id=e.tag_id, sort_order=e.sort_order,
+            sort_order=e.sort_order,
         ))
     for income in MonthIncome.query.filter_by(month_id=source.id).all():
         target_income = MonthIncome.query.filter_by(month_id=target.id, user_id=income.user_id).first()

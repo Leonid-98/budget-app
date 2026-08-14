@@ -43,14 +43,6 @@ class Group(db.Model):
     archived = db.Column(db.Boolean, nullable=False, default=False)
 
 
-class Tag(db.Model):
-    __tablename__ = "tags"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, unique=True, nullable=False)
-    sort_order = db.Column(db.Integer, nullable=False, default=0)
-
-
 class Entry(db.Model):
     __tablename__ = "entries"
 
@@ -60,8 +52,8 @@ class Entry(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey("groups.id"), nullable=False)
     name = db.Column(db.String, nullable=False)
     amount_cents = db.Column(db.Integer, nullable=False, default=0)
-    status = db.Column(db.String, nullable=False, default="pending")  # paid | pending
-    tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), nullable=True)
+    # one of services.STATUSES: paid | pending | swed | coop | seb | big
+    status = db.Column(db.String, nullable=False, default="pending")
     sort_order = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
@@ -69,7 +61,6 @@ class Entry(db.Model):
     month = db.relationship("Month")
     user = db.relationship("User")
     group = db.relationship("Group")
-    tag = db.relationship("Tag")
 
 
 class AuditLog(db.Model):

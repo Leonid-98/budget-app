@@ -67,12 +67,6 @@
               </select>
               <input class="in amount-in" name="amount" value="{{ e.amount_cents|money }}"
                      required pattern="[0-9\s ]+([.,][0-9]{1,2})?">
-              <select class="in" name="tag_id">
-                <option value="">—</option>
-                {% for tag in tags %}
-                <option value="{{ tag.id }}" {% if tag.id == e.tag_id %}selected{% endif %}>{{ tag.name }}</option>
-                {% endfor %}
-              </select>
               <span class="edit-actions">
                 <button class="btn primary small">Сохранить</button>
                 <button class="btn small danger" formaction="{{ url_for('main.entry_delete', entry_id=e.id) }}"
@@ -83,14 +77,16 @@
             {% else %}
             <div class="entry-main">
               <a class="entry-label" href="{{ url_for('main.month_view', year=m.year, month=m.month, edit=e.id) }}">{{ e.name }}</a>
-              {% if e.tag %}<span class="chip">{{ e.tag.name }}</span>{% endif %}
               <span class="leader"></span>
               <span class="amount">{{ e.amount_cents|money }}</span>
-              <form class="contents" method="post" action="{{ url_for('main.entry_toggle', entry_id=e.id) }}">
-                <button class="status {{ 'good' if e.status == 'paid' else 'warn' }}">
-                  {{ "оплачено" if e.status == "paid" else "ожидает" }}
-                </button>
-              </form>
+              <div class="status-dd">
+                <button type="button" class="status {{ STATUS_CLASS[e.status] }}" data-dd>{{ STATUS_LABEL[e.status] }}</button>
+                <form class="status-menu hidden" method="post" action="{{ url_for('main.entry_status', entry_id=e.id) }}">
+                  {% for key, label, cls in STATUSES %}
+                  <button class="status {{ cls }}" name="status" value="{{ key }}">{{ label }}</button>
+                  {% endfor %}
+                </form>
+              </div>
             </div>
             {% endif %}
           {% endfor %}
@@ -159,12 +155,6 @@
     <label class="field">Сумма
       <input class="in" name="amount" required pattern="[0-9\s ]+([.,][0-9]{1,2})?">
     </label>
-    <label class="field">Тег
-      <select class="in" name="tag_id">
-        <option value="">—</option>
-        {% for tag in tags %}<option value="{{ tag.id }}">{{ tag.name }}</option>{% endfor %}
-      </select>
-    </label>
     <button class="btn primary">Добавить</button>
   </form>
 </dialog>
@@ -219,18 +209,6 @@
       </ul>
       <button class="ghost" data-toggle="#group-add-form">＋ Добавить группу</button>
       <form id="group-add-form" class="row-form hidden" method="post" action="{{ url_for('main.group_add') }}">
-        <input type="hidden" name="month_id" value="{{ m.id }}">
-        <input class="in" name="name" required>
-        <button class="btn primary small">Добавить</button>
-      </form>
-    </div>
-    <div>
-      <h4>Теги</h4>
-      <div class="tag-row">
-        {% for tag in tags %}<span class="chip">{{ tag.name }}</span>{% endfor %}
-        <button class="ghost" data-toggle="#tag-add-form">＋ Добавить тег</button>
-      </div>
-      <form id="tag-add-form" class="row-form hidden" method="post" action="{{ url_for('main.tag_add') }}">
         <input type="hidden" name="month_id" value="{{ m.id }}">
         <input class="in" name="name" required>
         <button class="btn primary small">Добавить</button>
