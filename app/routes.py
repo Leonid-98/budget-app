@@ -213,6 +213,28 @@ def entry_delete(entry_id):
     return _back(m)
 
 
+@bp.post("/entries/reorder")
+def entries_reorder():
+    """Persist a drag-and-drop order: `ids` is the cell's entry ids, in order."""
+    ids = [int(x) for x in (request.form.get("ids") or "").split(",") if x.strip().isdigit()]
+    entries = [e for e in (db.session.get(Entry, i) for i in ids) if e is not None]
+    if len(entries) < 2:
+        return ("", 204)
+    first = entries[0]
+    if any(e.month_id != first.month_id or e.user_id != first.user_id
+           or e.group_id != first.group_id for e in entries):
+        return ("", 400)
+    if [e.sort_order for e in entries] == sorted(e.sort_order for e in entries):
+        return ("", 204)  # nothing moved
+    for index, entry in enumerate(entries):
+        entry.sort_order = index
+    services.log(g.actor,
+                 f"порядок записей изменён ({first.group.name}, {first.user.display_name})",
+                 services.month_label(first.month.year, first.month.month))
+    db.session.commit()
+    return ("", 204)
+
+
 # ---------- settings (shared data) ----------
 
 @bp.post("/settings/income/<int:user_id>")

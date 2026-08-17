@@ -65,12 +65,39 @@ document.addEventListener("click", (e) => {
   if (themeBtn) return setPref("theme", themeBtn.dataset.themeValue, themeBtn);
 });
 
+// Drag-and-drop reordering inside each group cell (one Sortable per cell).
+function initSortables() {
+  document.querySelectorAll(".band .side").forEach((cell) => {
+    if (cell.dataset.sortable) return;
+    cell.dataset.sortable = "1";
+    new Sortable(cell, {
+      animation: 150,
+      delay: 250,
+      delayOnTouchOnly: true,
+      draggable: ".entry-main",
+      ghostClass: "drag-ghost",
+      onEnd: (evt) => {
+        if (evt.oldIndex === evt.newIndex) return;
+        const ids = [...cell.querySelectorAll("[data-id]")].map((el) => el.dataset.id);
+        const body = new URLSearchParams();
+        body.set("ids", ids.join(","));
+        fetch("/entries/reorder", { method: "POST", body })
+          .then((r) => { if (!r.ok) location.reload(); });
+      },
+    });
+  });
+}
+
 // Reopen the dialog requested by the server (?dlg=...) — on first load and
 // after every htmx swap, so e.g. Settings stays open across its own actions.
 function openFromState() {
   const page = document.getElementById("page");
   if (page && page.dataset.dlg) openDialog("dlg-" + page.dataset.dlg);
 }
-document.addEventListener("DOMContentLoaded", openFromState);
-document.body.addEventListener("htmx:afterSwap", openFromState);
+function initPage() {
+  openFromState();
+  initSortables();
+}
+document.addEventListener("DOMContentLoaded", initPage);
+document.body.addEventListener("htmx:afterSwap", initPage);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeStatusMenus(); });

@@ -27,7 +27,9 @@ personal server behind oauth2-proxy.
    (light blue), seb pank (dark green), bigbank (light green) — a state is
    either a payment status or the bank where the money sits.
 2. **Inline editing** — click an expense to edit it in place (htmx partial
-   updates); the summary recalculates on every change.
+   updates); the summary recalculates on every change. Entries can be
+   reordered by dragging within their group cell (vendored SortableJS,
+   long-press on touch); order is persisted and audited.
 3. **Summary block** — below the ledger: a small table with a column per
    person and rows Income / Expenses / Free, followed by the transfer line
    in plain text: "<Name> to send <Name> <amount>" (amount in accent color,

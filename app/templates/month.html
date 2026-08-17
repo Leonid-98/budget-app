@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
   <meta name="htmx-config" content='{"scrollIntoViewOnBoost": false}'>
   <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='sortable.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
 <body>
@@ -40,7 +41,7 @@
 
 {% macro entry_row(e, m, groups, edit_id) %}
 {% if edit_id == e.id %}
-<form class="edit-row" method="post" action="{{ url_for('main.entry_update', entry_id=e.id) }}">
+<form class="edit-row" data-id="{{ e.id }}" method="post" action="{{ url_for('main.entry_update', entry_id=e.id) }}">
   <input class="in name" name="name" value="{{ e.name }}" required>
   <select class="in" name="group_id">
     {% for grp in groups %}
@@ -57,7 +58,7 @@
   </span>
 </form>
 {% else %}
-<div class="entry-main">
+<div class="entry-main" data-id="{{ e.id }}">
   <a class="entry-label" href="{{ url_for('main.month_view', year=m.year, month=m.month, edit=e.id) }}">{{ e.name }}</a>
   <span class="leader"></span>
   <span class="amount">{{ e.amount_cents|money }}</span>

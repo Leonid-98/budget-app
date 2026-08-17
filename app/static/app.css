@@ -257,6 +257,7 @@ a, button, input, select { font: inherit; }
   border-radius: 8px;
 }
 .entry-main:hover { background: var(--surface2); }
+.drag-ghost { opacity: 0.4; background: var(--accent-soft); }
 .entry-label { white-space: nowrap; color: var(--ink); text-decoration: none; }
 .entry-main:hover .entry-label { color: var(--accent); }
 .leader { flex: 1; min-width: 12px; }

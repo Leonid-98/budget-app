@@ -202,6 +202,40 @@ def test_migration_converts_bank_tags_to_states(app):
         assert "tags" not in tables
 
 
+def test_reorder_entries(as_lenya, app):
+    as_lenya.get("/m/2026/8")
+    month_id = _month_id(app, 2026, 8)
+    for name in ["Первая", "Вторая", "Третья"]:
+        _add_entry(as_lenya, app, month_id, name=name, amount="10,00")
+    with app.app_context():
+        ids = [e.id for e in Entry.query.order_by(Entry.sort_order).all()]
+
+    reversed_ids = ",".join(str(i) for i in reversed(ids))
+    response = as_lenya.post("/entries/reorder", data={"ids": reversed_ids})
+    assert response.status_code == 204
+
+    with app.app_context():
+        names = [e.name for e in Entry.query.order_by(Entry.sort_order, Entry.id).all()]
+        assert names == ["Третья", "Вторая", "Первая"]
+        messages = [a.message for a in AuditLog.query.all()]
+    assert any("порядок записей изменён" in m for m in messages)
+
+    # page renders in the new order
+    html = as_lenya.get("/m/2026/8").get_data(as_text=True)
+    assert html.index("Третья") < html.index("Вторая") < html.index("Первая")
+
+
+def test_reorder_rejects_mixed_cells(as_lenya, app):
+    as_lenya.get("/m/2026/8")
+    month_id = _month_id(app, 2026, 8)
+    _add_entry(as_lenya, app, month_id, name="Моя", side="left")
+    _add_entry(as_lenya, app, month_id, name="Её", side="right")
+    with app.app_context():
+        ids = ",".join(str(e.id) for e in Entry.query.all())
+    response = as_lenya.post("/entries/reorder", data={"ids": ids})
+    assert response.status_code == 400
+
+
 def test_income_updates_current_and_future_months_only(as_lenya, app):
     as_lenya.get("/m/2026/7")
     as_lenya.get("/m/2026/8")
