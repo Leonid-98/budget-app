@@ -7,6 +7,8 @@ from sqlalchemy import func
 
 db = SQLAlchemy()
 
+APP_VERSION = "1.0.7" # Just hardcoded chunk, no GIT/CI sync
+
 
 def users_from_env():
     return [
@@ -52,6 +54,7 @@ def create_app(config=None):
 
     app.jinja_env.filters["money"] = services.fmt_money
     app.jinja_env.filters["when"] = services.fmt_when
+    app.jinja_env.globals["APP_VERSION"] = APP_VERSION
     app.jinja_env.globals["STATUSES"] = services.STATUSES
     app.jinja_env.globals["STATUS_LABEL"] = services.STATUS_LABEL
     app.jinja_env.globals["STATUS_CLASS"] = services.STATUS_CLASS
